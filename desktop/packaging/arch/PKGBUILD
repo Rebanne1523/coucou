@@ -24,13 +24,24 @@ options=('!lto')
 _root="$(realpath "$startdir/../../..")"
 
 prepare() {
-  # Build in a private copy of the tree so makepkg's src/ never ends up in git.
+  # Build in a private copy of the tree. makepkg's src/ and pkg/ live *inside*
+  # this checkout (desktop/packaging/arch), so a plain `cp -a desktop` would copy
+  # the directory into itself — hence tar with explicit excludes.
   rm -rf "$srcdir/coucou"
   mkdir -p "$srcdir/coucou"
-  cp -a "$_root/desktop" "$srcdir/coucou/desktop"
-  cp -a "$_root/NotchBuddy" "$srcdir/coucou/NotchBuddy"   # the shared sounds live here
+  tar -C "$_root" \
+    --exclude='desktop/target' \
+    --exclude='desktop/node_modules' \
+    --exclude='desktop/dist' \
+    --exclude='desktop/release' \
+    --exclude='desktop/packaging/arch/src' \
+    --exclude='desktop/packaging/arch/pkg' \
+    --exclude='desktop/packaging/arch/*.pkg.tar.*' \
+    -cf - desktop | tar -C "$srcdir/coucou" -xf -
+  # The shared sounds live in the macOS app's folder (see SOUNDS_DIR in vite.config.ts).
+  mkdir -p "$srcdir/coucou/NotchBuddy/Resources"
+  cp -a "$_root/NotchBuddy/Resources/sounds" "$srcdir/coucou/NotchBuddy/Resources/sounds"
   cp "$_root/LICENSE" "$srcdir/coucou/LICENSE"
-  rm -rf "$srcdir/coucou/desktop/target" "$srcdir/coucou/desktop/node_modules" "$srcdir/coucou/desktop/dist"
 }
 
 build() {
