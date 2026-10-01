@@ -6,12 +6,15 @@ Coucou is a native macOS app: Mochi, a small animated character living in the Ma
 - `NotchBuddy/Sources/App/` — all Swift code. `NotchBuddy/Resources/sounds/` — the 28 WAV sounds. `NotchBuddy/project.yml` — XcodeGen project (never edit the `.xcodeproj` by hand).
 - `docs/SPEC.md`, `docs/INTEGRATIONS.md` — behaviour, views, states, integrations (in French).
 - `design/prototype/notch-buddy.html` — original prototype, the visual source of truth. `design/captures/` — target screenshots.
+- `desktop/` — the Tauri 2 port for Windows and Linux (Rust backend in `src-tauri/`, TypeScript front end in `src/`, `hook/` relay, `packaging/` for Arch). OS-specific code lives in `src-tauri/src/island/{win,linux}.rs` and `src-tauri/src/relay/{win,unix}.rs`; keep the rest portable.
 - `docs/*.html` — the GitHub Pages site (privacy, terms, support, legal notice).
 
 ## Build
 ```
 cd NotchBuddy && xcodegen && xcodebuild -scheme NotchBuddy -configuration Debug build
 ```
+
+Desktop port: `cd desktop && npm ci && npm run build && cargo test -p coucou -p coucou-hook`.
 
 ## Rules
 - Swift 6, SwiftUI + AppKit. No third-party dependencies unless truly unavoidable. The character is drawn in code (`Canvas` + `TimelineView`), no Rive/Lottie/images.

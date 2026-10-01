@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Coucou
+GenericName=Claude Code companion
+Comment=Mochi lives at the top of your screen: approve Claude Code, chat, drop files
+Exec=coucou
+Icon=coucou
+Terminal=false
+Categories=Development;Utility;
+Keywords=claude;claude code;mochi;notch;
+StartupNotify=false

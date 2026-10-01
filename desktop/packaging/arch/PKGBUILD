@@ -1,0 +1,62 @@
+# Maintainer: Louis Raille
+#
+# Builds Coucou from the checkout this file lives in — no tarball to download:
+#
+#   cd desktop/packaging/arch && makepkg -si
+#
+# For an AUR-style package, replace `_root` and `prepare()` with a git source.
+
+pkgname=coucou
+pkgver=0.1.1
+pkgrel=1
+pkgdesc="Mochi, a small animated character at the top of your screen: Claude Code approvals, chat, file drops, service pills"
+arch=('x86_64' 'aarch64')
+url="https://github.com/rebanne1523/coucou"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'gtk-layer-shell' 'libayatana-appindicator' 'dbus' 'xdg-utils')
+makedepends=('rust' 'nodejs' 'npm' 'pkgconf')
+optdepends=(
+  'kwallet: Secret Service for API keys on KDE Plasma (enable "Secret service" in KDE Wallet)'
+  'gnome-keyring: Secret Service for API keys elsewhere'
+)
+options=('!lto')
+
+_root="$(realpath "$startdir/../../..")"
+
+prepare() {
+  # Build in a private copy of the tree so makepkg's src/ never ends up in git.
+  rm -rf "$srcdir/coucou"
+  mkdir -p "$srcdir/coucou"
+  cp -a "$_root/desktop" "$srcdir/coucou/desktop"
+  cp -a "$_root/NotchBuddy" "$srcdir/coucou/NotchBuddy"   # the shared sounds live here
+  cp "$_root/LICENSE" "$srcdir/coucou/LICENSE"
+  rm -rf "$srcdir/coucou/desktop/target" "$srcdir/coucou/desktop/node_modules" "$srcdir/coucou/desktop/dist"
+}
+
+build() {
+  cd "$srcdir/coucou/desktop"
+  export CARGO_TARGET_DIR=target
+  npm ci --no-audit --no-fund
+  # Builds coucou-hook first (prebuild), then type-checks and bundles the front end.
+  npm run build
+  # `custom-protocol` embeds the front end; without it the binary would look for
+  # the Vite dev server.
+  cargo build --release --locked --features custom-protocol -p coucou
+}
+
+check() {
+  cd "$srcdir/coucou/desktop"
+  cargo test --release --locked -p coucou -p coucou-hook
+}
+
+package() {
+  cd "$srcdir/coucou"
+  install -Dm755 desktop/target/release/coucou      "$pkgdir/usr/bin/coucou"
+  # The app copies this into ~/.local/share/coucou/bin on launch; it looks next to
+  # its own binary first, which is /usr/bin here.
+  install -Dm755 desktop/target/release/coucou-hook "$pkgdir/usr/bin/coucou-hook"
+  install -Dm644 desktop/packaging/linux/coucou.desktop "$pkgdir/usr/share/applications/coucou.desktop"
+  install -Dm644 desktop/src-tauri/icons/32x32.png   "$pkgdir/usr/share/icons/hicolor/32x32/apps/coucou.png"
+  install -Dm644 desktop/src-tauri/icons/128x128.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/coucou.png"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

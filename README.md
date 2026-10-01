@@ -4,12 +4,13 @@
 
 # Coucou
 
-**A tiny friend that lives in your Mac's notch — or at the top of your screen on Windows — and keeps an eye on your Claude Code sessions.**
+**A tiny friend that lives in your Mac's notch — or at the top of your screen on Windows and Linux — and keeps an eye on your Claude Code sessions.**
 
 Approve permissions, watch your agents work, drop a file, chat with Claude — all without leaving what you're doing.
 
 ![macOS 15+](https://img.shields.io/badge/macOS-15%2B-black?logo=apple)
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-0078D4?logo=windows&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-Arch%20%2F%20CachyOS-1793D1?logo=archlinux&logoColor=white)
 ![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-native-0A84FF)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=black)
@@ -70,8 +71,20 @@ at Microsoft and the installer will come back once it is cleared and signed.
 Until then you can [build it from source](#build-from-source).
 
 There is no notch on a PC, so the island slides out of the top edge of the screen
-instead of hiding inside one. See [`windows/README.md`](windows/README.md) for the
+instead of hiding inside one. See [`desktop/README.md`](desktop/README.md) for the
 rest of the differences.
+
+### Linux (CachyOS / Arch)
+
+```bash
+git clone https://github.com/rebanne1523/coucou.git
+cd coucou/desktop/packaging/arch
+makepkg -si
+```
+
+Built for KDE Plasma on Wayland (the island is a layer-shell surface at the top
+edge); also runs on X11 and wlroots compositors. API keys go in the Secret Service
+(KDE Wallet or GNOME Keyring). Details in [`desktop/README.md`](desktop/README.md).
 
 ### Build from source
 
@@ -89,20 +102,30 @@ open NotchBuddy.xcodeproj   # then ⌘R
 
 ```powershell
 git clone https://github.com/Louis-CFM/coucou.git
-cd coucou/windows
+cd coucou/desktop
 npm install
-npm run pack                # installer lands in windows/release/
+npm run pack                # installer lands in desktop/release/
+```
+
+**Linux** — requirements: Rust, Node 20+, `webkit2gtk-4.1`, `gtk3`, `gtk-layer-shell`, `libayatana-appindicator`, `dbus` (package names for Arch; see [`desktop/README.md`](desktop/README.md) for Debian/Ubuntu).
+
+```bash
+git clone https://github.com/Louis-CFM/coucou.git
+cd coucou/desktop
+npm install
+npm run tauri dev           # or: npm run pack  → .deb / .rpm / AppImage in desktop/release/
 ```
 
 ## Setup
 
-Click the Coucou icon in the menu bar (macOS) or in the system tray (Windows) → **Settings…**
+Click the Coucou icon in the menu bar (macOS) or in the system tray (Windows, Linux) → **Settings…**
 
 | What | Why | Where the key goes |
 |---|---|---|
 | **Claude Code hooks** | live sessions and approvals | **Install hooks** — Coucou backs up `~/.claude/settings.json`, merges its hooks and shows you the diff before writing anything |
-| **Anthropic API key** | chat and questions about files | Keychain / Windows Credential Manager |
-| Stripe, n8n, GitHub, Vercel, Resend, Notion, Cal.com | the integration pills | Keychain / Windows Credential Manager, all optional |
+| **Anthropic API key** | chat and questions about files | Keychain / Windows Credential Manager / Secret Service (Linux) |
+| Stripe, n8n, GitHub, Vercel, Resend, Notion, Cal.com | the integration pills | same store, all optional |
+| Supabase *(Windows and Linux)* | project health and Edge Function errors | same store: project URL, public key, optional access token |
 
 If Coucou isn't running, the hook exits immediately: **Claude Code is never blocked.**
 
@@ -110,7 +133,7 @@ If Coucou isn't running, the hook exits immediately: **Claude Code is never bloc
 
 | Do this | Mochi does that |
 |---|---|
-| Hover the notch (top edge on Windows) | peeks out and says hi 👋 |
+| Hover the notch (top edge on Windows and Linux) | peeks out and says hi 👋 |
 | Click it | opens |
 | Hover Mochi | blinks, eyes grow |
 | Click Mochi | squish + annoyed |
@@ -134,7 +157,12 @@ The macOS app is native Swift 6 / SwiftUI / AppKit with **zero third-party depen
 
 - A [Tauri 2](https://tauri.app) app (Rust + TypeScript): the island is a transparent, always-on-top window that never steals focus, Mochi is drawn in Canvas 2D with the same shapes, timings and sounds as on the Mac.
 - Claude Code hooks go through a tiny `coucou-hook.exe` and a named pipe; keys live in Windows Credential Manager.
-- Details and differences in [`windows/README.md`](windows/README.md).
+- Details and differences in [`desktop/README.md`](desktop/README.md).
+
+**Linux**
+
+- The same Tauri app. The island is a [`wlr-layer-shell`](https://wayland.app/protocols/wlr-layer-shell-unstable-v1) overlay anchored to the top edge (X11: a plain always-on-top window), with an input region cut to the island's shape so everything around it is click-through. Wayland has no global cursor, so the island follows the pointer events its own window gets.
+- Claude Code hooks go through `coucou-hook` and an owner-only Unix socket in `$XDG_RUNTIME_DIR`; keys live in the Secret Service (KDE Wallet / GNOME Keyring).
 
 ## Contributing
 

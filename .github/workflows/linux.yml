@@ -1,0 +1,82 @@
+name: Linux
+
+# Builds and tests the Linux app (the cross-platform code in desktop/). The
+# Windows installer has its own workflow; the macOS app is untouched.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - 'NotchBuddy/Resources/sounds/**'
+      - '.github/workflows/linux.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'NotchBuddy/Resources/sounds/**'
+      - '.github/workflows/linux.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: desktop
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install system libraries
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libgtk-layer-shell-dev \
+            libdbus-1-dev libayatana-appindicator3-dev librsvg2-dev pkg-config build-essential
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/target
+          key: linux-cargo-${{ hashFiles('desktop/Cargo.lock') }}
+          restore-keys: linux-cargo-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Builds coucou-hook, type-checks the front end and bundles it.
+      - name: Build the front end
+        run: npm run build
+
+      - name: Rust tests
+        run: cargo test -p coucou -p coucou-hook
+
+      - name: Build the app
+        run: cargo build --release --locked --features custom-protocol -p coucou
+
+  # The target distribution is CachyOS (Arch). Makes sure the PKGBUILD still builds.
+  arch:
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm git rust nodejs npm pkgconf webkit2gtk-4.1 gtk3 gtk-layer-shell \
+            libayatana-appindicator dbus xdg-utils
+      - uses: actions/checkout@v4
+      - name: makepkg
+        run: |
+          useradd -m builder
+          chown -R builder .
+          su builder -c 'cd desktop/packaging/arch && makepkg --noconfirm --nodeps -f'
